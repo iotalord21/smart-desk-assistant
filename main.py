@@ -25,26 +25,43 @@ while cap.isOpened():
 
         landmarks = results.pose_landmarks.landmark
 
-        shoulder = landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value]
-        ear = landmarks[mp_pose.PoseLandmark.LEFT_EAR.value]
+        # Get landmarks
+        left_shoulder = landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value]
+        right_shoulder = landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value]
+        left_ear = landmarks[mp_pose.PoseLandmark.LEFT_EAR.value]
 
         h, w, _ = frame.shape
 
-        shoulder_x = int(shoulder.x * w)
-        ear_x = int(ear.x * w)
+        # Convert to pixel coordinates
+        left_shoulder_x = int(left_shoulder.x * w)
+        right_shoulder_x = int(right_shoulder.x * w)
+        ear_x = int(left_ear.x * w)
 
-        forward_distance = abs(ear_x - shoulder_x)
+        # Shoulder width (used for normalization)
+        shoulder_width = abs(right_shoulder_x - left_shoulder_x)
 
-        # Threshold (tune if needed)
-        if forward_distance > 40:
+        # Prevent division by zero
+        if shoulder_width != 0:
+            forward_ratio = abs(ear_x - left_shoulder_x) / shoulder_width
+        else:
+            forward_ratio = 0
+
+        # Threshold for posture
+        if forward_ratio > 0.40:
             posture = "Bad Posture"
             color = (0, 0, 255)
         else:
             posture = "Good Posture"
             color = (0, 255, 0)
 
+        # Display posture result
         cv2.putText(frame, posture, (50, 50),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+
+        # Display forward ratio value
+        cv2.putText(frame, f"Forward Ratio: {round(forward_ratio, 2)}",
+                    (50, 90),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
 
     cv2.imshow("Smart Desk Assistant", frame)
 
